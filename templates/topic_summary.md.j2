@@ -1,0 +1,11 @@
+# {{ topic.topic_name }}
+
+Slug: `{{ topic.slug }}`
+
+Discovered papers: {{ papers | length }}
+
+| Priority | Rank | Year | Venue | Title |
+| --- | --- | --- | --- | --- |
+{% for paper in papers %}
+| {{ paper.processing_priority }} | {{ paper.ccf_rank }} | {{ paper.year }} | {{ paper.venue }} | {{ paper.title }} |
+{% endfor %}

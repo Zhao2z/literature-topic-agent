@@ -1,0 +1,18 @@
+topic_name: 测试用例生成研究
+slug: test-case-generation
+keyword_groups:
+  - ["Test Case Generation"]
+  - ["Unit Test Generation"]
+  - ["Automated Test Generation"]
+  - ["LLM", "Test Generation"]
+year_range:
+  start: 2015
+  end: 2026
+max_candidate_count: 120
+ranking_weights:
+  ccf_rank: 0.35
+  recency: 0.30
+  citations: 0.20
+  keyword_match: 0.15
+initial_parse_limit: 20
+update_cron: "0 7 * * *"
