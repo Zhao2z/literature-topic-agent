@@ -168,3 +168,21 @@ for item in failed[:20]:
     print(item.get("download_failure_code"), "|", item.get("title", "")[:90])
 PY
 ```
+
+## 9. CCF 映射来源
+
+默认使用 `config/ccf_venues.json` 作为 CCF 会议信息映射文件。
+
+如需使用你自己的映射文件，可在运行时覆盖：
+
+```bash
+uv run literature-topic-agent config/example_topic.yaml \
+  --workspace-root ./workspace \
+  --ccf-mapping-path /path/to/your/ccf_mapping.json
+```
+
+`temp/` 目录用于本地外部资源缓存，不纳入版本管理。
+
+## Acknowledgements
+
+CCF 排名相关数据整理与思路参考了 [CCFrank4dblp](https://github.com/WenyanLiu/CCFrank4dblp) 项目，感谢原作者。

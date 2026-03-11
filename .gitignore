@@ -36,4 +36,4 @@ pip-wheel-metadata/
 workspace/**/index.sqlite3
 workspace/**/logs/
 workspace/**/logs/**
-# temp/
+temp/

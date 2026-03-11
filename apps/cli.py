@@ -34,7 +34,7 @@ if typer is not None:
     def discover(
         config_path: Path,
         workspace_root: Path = Path("workspace"),
-        ccf_mapping_path: Path = PROJECT_ROOT / "temp" / "CCFrank4dblp" / "data",
+        ccf_mapping_path: Path = PROJECT_ROOT / "config" / "ccf_venues.json",
         render_markdown: bool = True,
         download_timeout: float = 120.0,
         download_attempts: int = 5,
