@@ -86,6 +86,25 @@ uv run literature-topic-agent config/example_topic.yaml \
   --no-render-markdown
 ```
 
+复用已保存的 `papers.json`，只重试失败论文的下载：
+
+```bash
+uv run literature-topic-agent config/example_topic.yaml \
+  --workspace-root ./workspace \
+  --reuse-paper-list \
+  --retry-failed-only
+```
+
+复用已保存的 `papers.json`，重新下载所有未落盘论文，并限制本次重试数量：
+
+```bash
+uv run literature-topic-agent config/example_topic.yaml \
+  --workspace-root ./workspace \
+  --reuse-paper-list \
+  --no-retry-failed-only \
+  --retry-limit 20
+```
+
 将结果写入指定目录：
 
 ```bash
@@ -167,6 +186,15 @@ print(f"failed={len(failed)}")
 for item in failed[:20]:
     print(item.get("download_failure_code"), "|", item.get("title", "")[:90])
 PY
+```
+
+如果在线检索已经完成、不想再次请求 DBLP / Semantic Scholar / Google Scholar，可以直接基于已保存的 paper list 重试下载：
+
+```bash
+uv run literature-topic-agent config/example_topic.yaml \
+  --workspace-root ./workspace \
+  --reuse-paper-list \
+  --retry-failed-only
 ```
 
 ## 9. CCF 映射来源

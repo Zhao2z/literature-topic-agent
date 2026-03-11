@@ -65,6 +65,8 @@ class CandidateDownloader:
             for paper in selected:
                 if self.download_paper(paper, workspace):
                     successful_downloads += 1
+                else:
+                    self._log_paper_failure(paper)
             return successful_downloads
 
         successful_downloads = 0
@@ -75,6 +77,8 @@ class CandidateDownloader:
                 try:
                     if future.result():
                         successful_downloads += 1
+                    else:
+                        self._log_paper_failure(paper)
                 except Exception as exc:  # pragma: no cover - defensive for unexpected runtime issues
                     LOGGER.bind(paper_id=paper.paper_id, error_type=type(exc).__name__, error=str(exc)).exception(
                         "Unhandled error when downloading paper"
@@ -137,6 +141,13 @@ class CandidateDownloader:
             }
         domain = urlparse(candidate_url).netloc.lower()
         if domain and domain in self._blocked_domains:
+            LOGGER.bind(
+                paper_id=paper.paper_id,
+                title=paper.title,
+                source=candidate.source,
+                domain=domain,
+                url=candidate.url,
+            ).warning("Skipping candidate because domain is temporarily blocked")
             return False, {
                 "code": "domain_temporarily_blocked",
                 "message": f"Skipping blocked domain: {domain}",
@@ -151,6 +162,7 @@ class CandidateDownloader:
                 last_error = exc
                 LOGGER.bind(
                     paper_id=paper.paper_id,
+                    title=paper.title,
                     source=candidate.source,
                     url=candidate.url,
                     attempt=attempt,
@@ -166,7 +178,13 @@ class CandidateDownloader:
             self._reset_domain_failures(domain)
             file_path = self._store_pdf_bytes(workspace, paper, response.content)
             self._mark_downloaded(paper, file_path, final_url, paper.landing_url or candidate.url, candidate.source)
-            LOGGER.bind(paper_id=paper.paper_id, path=str(file_path), source_url=final_url).info("Downloaded PDF")
+            LOGGER.bind(
+                paper_id=paper.paper_id,
+                title=paper.title,
+                source=candidate.source,
+                path=str(file_path),
+                source_url=final_url,
+            ).info("Downloaded PDF")
             return True, None
 
         media_type = _response_media_type(response)
@@ -184,14 +202,20 @@ class CandidateDownloader:
             failure = _classify_http_failure(response, response.text)
             if failure:
                 self._record_domain_failure(domain, failure["code"])
+                self._log_candidate_failure(paper, candidate, failure, response.status_code, final_url)
                 return False, failure
-            return False, {"code": "landing_page_missing", "message": f"No PDF link found at {final_url}"}
+            failure = {"code": "landing_page_missing", "message": f"No PDF link found at {final_url}"}
+            self._log_candidate_failure(paper, candidate, failure, response.status_code, final_url)
+            return False, failure
 
         failure = _classify_http_failure(response, response.text if media_type.startswith("text/") else "")
         if failure:
             self._record_domain_failure(domain, failure["code"])
+            self._log_candidate_failure(paper, candidate, failure, response.status_code, final_url)
             return False, failure
-        return False, {"code": "pdf_not_found", "message": f"Unexpected non-PDF response from {candidate.url}"}
+        failure = {"code": "pdf_not_found", "message": f"Unexpected non-PDF response from {candidate.url}"}
+        self._log_candidate_failure(paper, candidate, failure, response.status_code, final_url)
+        return False, failure
 
     def _record_domain_failure(self, domain: str, failure_code: str) -> None:
         if not domain:
@@ -263,6 +287,36 @@ class CandidateDownloader:
         paper.download_failure_code = code
         paper.last_error = message
         paper.timestamps.updated_at = datetime.now(timezone.utc)
+
+    @staticmethod
+    def _log_candidate_failure(
+        paper: PaperRecord,
+        candidate: DownloadCandidate,
+        failure: dict[str, str],
+        status_code: int,
+        final_url: str,
+    ) -> None:
+        LOGGER.bind(
+            paper_id=paper.paper_id,
+            title=paper.title,
+            source=candidate.source,
+            candidate_url=candidate.url,
+            final_url=final_url,
+            status_code=status_code,
+            failure_code=failure["code"],
+            error=failure["message"],
+        ).warning("Download candidate failed")
+
+    @staticmethod
+    def _log_paper_failure(paper: PaperRecord) -> None:
+        LOGGER.bind(
+            paper_id=paper.paper_id,
+            title=paper.title,
+            failure_code=paper.download_failure_code,
+            error=paper.last_error,
+            doi=paper.doi,
+            landing_url=paper.landing_url,
+        ).warning("Paper download failed")
 
 
 def _response_media_type(response: httpx.Response) -> str:

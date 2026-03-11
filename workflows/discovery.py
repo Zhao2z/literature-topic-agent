@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -46,6 +47,7 @@ class DiscoveryWorkflow:
         normalized_records = self._normalize_records(raw_records, topic_config)
         deduplicated = deduplicate_papers(normalized_records)
         ranked = self._enrich_and_rank(deduplicated, topic_config)
+        ranked = self._merge_with_existing_papers(ranked)
         self._hydrate_download_state(ranked)
 
         job = ProcessingJob(
@@ -72,6 +74,7 @@ class DiscoveryWorkflow:
                 downloaded_count = self.paper_downloader.download_papers(to_download, workspace, limit=None)
             job.processed_counts.downloaded = sum(1 for paper in ranked if paper.status == PaperStatus.DOWNLOADED)
             job.updated_at = datetime.now(timezone.utc)
+            self._log_download_failures(topic_config.slug, to_download)
             LOGGER.bind(
                 topic=topic_config.slug,
                 attempted=len(to_download),
@@ -135,6 +138,69 @@ class DiscoveryWorkflow:
                 paper.download_source = state.get("download_source")
                 paper.status = PaperStatus.DOWNLOADED
 
+    def _merge_with_existing_papers(self, discovered_papers: list[PaperRecord]) -> list[PaperRecord]:
+        try:
+            existing_papers = self.json_store.load_papers()
+        except FileNotFoundError:
+            existing_papers = []
+
+        if not existing_papers:
+            return discovered_papers
+        if not discovered_papers:
+            LOGGER.bind(existing=len(existing_papers)).warning(
+                "Discovery returned no papers; preserving existing paper list"
+            )
+            return assign_processing_priority(existing_papers)
+
+        merged_by_id: dict[str, PaperRecord] = {
+            paper.paper_id: paper.model_copy(deep=True) for paper in existing_papers
+        }
+        for paper in discovered_papers:
+            existing = merged_by_id.get(paper.paper_id)
+            if existing is None:
+                merged_by_id[paper.paper_id] = paper
+                continue
+            merged_by_id[paper.paper_id] = _merge_existing_and_discovered(existing, paper)
+
+        merged = list(merged_by_id.values())
+        LOGGER.bind(
+            existing=len(existing_papers),
+            discovered=len(discovered_papers),
+            merged=len(merged),
+        ).info("Merged discovered papers with existing paper list")
+        return assign_processing_priority(merged)
+
+    def _log_download_failures(self, topic_slug: str, papers: list[PaperRecord]) -> None:
+        failed = [paper for paper in papers if paper.status != PaperStatus.DOWNLOADED and paper.download_failure_code]
+        if not failed:
+            return
+
+        counter = Counter(paper.download_failure_code for paper in failed if paper.download_failure_code)
+        examples_by_code: dict[str, list[PaperRecord]] = defaultdict(list)
+        for paper in failed:
+            assert paper.download_failure_code is not None
+            if len(examples_by_code[paper.download_failure_code]) < 3:
+                examples_by_code[paper.download_failure_code].append(paper)
+
+        LOGGER.bind(
+            topic=topic_slug,
+            failed=len(failed),
+            failed_by_code=", ".join(f"{code}:{count}" for code, count in counter.most_common()),
+        ).warning("PDF download failures summary")
+
+        for code, count in counter.most_common():
+            for paper in examples_by_code[code]:
+                LOGGER.bind(
+                    topic=topic_slug,
+                    failure_code=code,
+                    count=count,
+                    paper_id=paper.paper_id,
+                    title=paper.title,
+                    doi=paper.doi,
+                    landing_url=paper.landing_url,
+                    error=paper.last_error,
+                ).warning("PDF download failure example")
+
 
 def _matches_year_range(year: int, topic_config: TopicConfig) -> bool:
     if topic_config.year_range.start and year < topic_config.year_range.start:
@@ -150,3 +216,26 @@ def _is_downloaded_locally(paper: PaperRecord) -> bool:
         and bool(paper.local_pdf_path)
         and Path(paper.local_pdf_path).exists()
     )
+
+
+def _merge_existing_and_discovered(existing: PaperRecord, discovered: PaperRecord) -> PaperRecord:
+    merged = existing.model_copy(deep=True)
+    merged.topic_slug = discovered.topic_slug
+    merged.title = discovered.title or merged.title
+    merged.authors = discovered.authors or merged.authors
+    merged.venue = discovered.venue or merged.venue
+    merged.year = discovered.year or merged.year
+    merged.venue_type = discovered.venue_type or merged.venue_type
+    merged.ccf_rank = discovered.ccf_rank or merged.ccf_rank
+    merged.dblp_url = discovered.dblp_url or merged.dblp_url
+    merged.doi = discovered.doi or merged.doi
+    merged.bibtex = discovered.bibtex or merged.bibtex
+    merged.citations = discovered.citations if discovered.citations is not None else merged.citations
+    merged.keyword_matches = sorted(set(merged.keyword_matches + discovered.keyword_matches))
+    merged.download_candidates = discovered.download_candidates or merged.download_candidates
+    merged.landing_url = discovered.landing_url or merged.landing_url
+    merged.pdf_url = discovered.pdf_url or merged.pdf_url
+    merged.rank_score = discovered.rank_score
+    merged.processing_priority = discovered.processing_priority
+    merged.timestamps.updated_at = datetime.now(timezone.utc)
+    return merged

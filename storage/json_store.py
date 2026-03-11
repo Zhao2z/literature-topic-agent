@@ -23,6 +23,13 @@ class JsonArtifactStore:
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         return path
 
+    def load_papers(self, filename: str = "papers.json") -> list[PaperRecord]:
+        """Load paper records from disk."""
+
+        path = self.artifacts_dir / filename
+        rows = json.loads(path.read_text(encoding="utf-8"))
+        return [PaperRecord.model_validate(row) for row in rows]
+
     def save_job(self, job: ProcessingJob, filename: str = "job.json") -> Path:
         """Write a job record to disk."""
 
