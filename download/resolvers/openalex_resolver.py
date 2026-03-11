@@ -26,10 +26,23 @@ class OpenAlexResolver:
         payload = response.json()
         candidates: list[DownloadCandidate] = []
         for location in [payload.get("best_oa_location") or {}, payload.get("primary_location") or {}]:
-            pdf_url = str(location.get("pdf_url", "")).strip()
-            landing_url = str(location.get("landing_page_url", "")).strip()
+            if not isinstance(location, dict):
+                continue
+            pdf_url = _normalize_url(location.get("pdf_url"))
+            landing_url = _normalize_url(location.get("landing_page_url"))
             if pdf_url:
                 candidates.append(DownloadCandidate(source="openalex_oa", url=pdf_url, priority=100))
             if landing_url:
                 candidates.append(DownloadCandidate(source="openalex_oa_landing", url=landing_url, priority=95))
         return candidates
+
+
+def _normalize_url(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    url = value.strip()
+    if not url:
+        return None
+    if not (url.startswith("http://") or url.startswith("https://")):
+        return None
+    return url

@@ -10,7 +10,7 @@ from domain.models import PaperRecord
 INVALID_COMPONENT_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]+')
 WHITESPACE_RE = re.compile(r"\s+")
 
-VENUE_ALIASES = {
+RAW_VENUE_ALIASES = {
     "international conference on software engineering": "ICSE",
     "icse": "ICSE",
     "icse companion": "ICSE-Companion",
@@ -23,6 +23,7 @@ VENUE_ALIASES = {
     "acm transactions on software engineering and methodology": "TOSEM",
     "acm trans. softw. eng. methodol.": "TOSEM",
     "empir. softw. eng.": "EMSE",
+    "empir softw eng": "EMSE",
     "autom. softw. eng.": "ASEJ",
     "issre workshops": "ISSREW",
     "qrs companion": "QRS-Companion",
@@ -58,10 +59,11 @@ def sanitize_filename_component(value: str, *, max_length: int) -> str:
     cleaned = cleaned.replace("&amp;", "and")
     cleaned = cleaned.replace("'", "")
     cleaned = re.sub(r"[^A-Za-z0-9 ._-]+", " ", cleaned)
+    cleaned = cleaned.replace("-", " ")
     cleaned = WHITESPACE_RE.sub(" ", cleaned).strip()
-    dashed = cleaned.replace(" ", "-")
-    dashed = re.sub(r"-{2,}", "-", dashed).strip("-.")
-    return dashed[:max_length].rstrip("-.") or "unknown"
+    underscored = cleaned.replace(" ", "_")
+    underscored = re.sub(r"_{2,}", "_", underscored).strip("._-")
+    return underscored[:max_length].rstrip("._-") or "unknown"
 
 
 def _normalize_lookup_key(value: str) -> str:
@@ -69,3 +71,6 @@ def _normalize_lookup_key(value: str) -> str:
     normalized = normalized.replace("&apos;", "").replace("&amp;", "and")
     normalized = re.sub(r"[^A-Za-z0-9]+", " ", normalized).strip().lower()
     return WHITESPACE_RE.sub(" ", normalized)
+
+
+VENUE_ALIASES = {_normalize_lookup_key(key): value for key, value in RAW_VENUE_ALIASES.items()}

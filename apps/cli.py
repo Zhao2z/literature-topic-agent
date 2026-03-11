@@ -36,13 +36,17 @@ if typer is not None:
         workspace_root: Path = Path("workspace"),
         ccf_mapping_path: Path = PROJECT_ROOT / "temp" / "CCFrank4dblp" / "data",
         render_markdown: bool = True,
+        download_timeout: float = 120.0,
+        download_attempts: int = 5,
+        download_workers: int = 4,
+        challenge_block_threshold: int = 3,
     ) -> None:
         """Run discovery for a topic config."""
 
-        configure_logging()
         topic_config = load_topic_config(config_path)
         workspace = TopicWorkspace(workspace_root, topic_config)
         workspace.ensure()
+        configure_logging(log_file=workspace.logs_dir / "run.log")
 
         search_client = FallbackSearchProvider(
             [
@@ -57,7 +61,12 @@ if typer is not None:
             venue_rank_provider=LocalCcfRankProvider(ccf_mapping_path),
             sqlite_store=SQLiteStore(workspace.database_path),
             json_store=JsonArtifactStore(workspace.artifacts_dir),
-            paper_downloader=DoiPdfDownloader(),
+            paper_downloader=DoiPdfDownloader(
+                timeout=download_timeout,
+                max_request_attempts=download_attempts,
+                max_workers=download_workers,
+                challenge_block_threshold=challenge_block_threshold,
+            ),
         )
         papers, _job = workflow.run(topic_config, workspace)
         if render_markdown:

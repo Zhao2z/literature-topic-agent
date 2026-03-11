@@ -8,11 +8,11 @@ keyword_groups:
 year_range:
   start: 2015
   end: 2026
-max_candidate_count: 120
+max_candidate_count: 300
 ranking_weights:
   ccf_rank: 0.35
   recency: 0.30
   citations: 0.20
   keyword_match: 0.15
-initial_parse_limit: 20
+initial_parse_limit: 100
 update_cron: "0 7 * * *"

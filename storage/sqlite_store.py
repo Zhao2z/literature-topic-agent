@@ -145,6 +145,36 @@ class SQLiteStore:
                 ),
             )
 
+    def load_download_state(self, paper_ids: list[str]) -> dict[str, dict[str, str | None]]:
+        """Load persisted download state for the given paper ids."""
+
+        if not paper_ids:
+            return {}
+
+        states: dict[str, dict[str, str | None]] = {}
+        with self._connect() as connection:
+            chunk_size = 900
+            for start in range(0, len(paper_ids), chunk_size):
+                chunk = paper_ids[start : start + chunk_size]
+                placeholders = ",".join("?" for _ in chunk)
+                rows = connection.execute(
+                    f"""
+                    SELECT paper_id, status, local_pdf_path, pdf_url, landing_url, download_source
+                    FROM papers
+                    WHERE paper_id IN ({placeholders})
+                    """,
+                    chunk,
+                ).fetchall()
+                for row in rows:
+                    states[str(row[0])] = {
+                        "status": str(row[1]) if row[1] is not None else None,
+                        "local_pdf_path": str(row[2]) if row[2] is not None else None,
+                        "pdf_url": str(row[3]) if row[3] is not None else None,
+                        "landing_url": str(row[4]) if row[4] is not None else None,
+                        "download_source": str(row[5]) if row[5] is not None else None,
+                    }
+        return states
+
     @staticmethod
     def _paper_to_row(paper: PaperRecord) -> tuple[object, ...]:
         return (

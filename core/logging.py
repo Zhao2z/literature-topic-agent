@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from typing import Any
 
 from loguru import logger
@@ -17,7 +18,7 @@ def _patch_record(record: dict[str, Any]) -> None:
     extras["context"] = " | ".join(context_items)
 
 
-def configure_logging(level: str = "INFO") -> None:
+def configure_logging(level: str = "INFO", log_file: str | Path | None = None) -> None:
     """Configure process-wide loguru logging."""
 
     logger.remove()
@@ -36,6 +37,23 @@ def configure_logging(level: str = "INFO") -> None:
             "<dim>{extra[context]}</dim>"
         ),
     )
+    if log_file is not None:
+        path = Path(log_file)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        logger.add(
+            str(path),
+            level=level.upper(),
+            colorize=False,
+            backtrace=True,
+            diagnose=False,
+            format=(
+                "{time:YYYY-MM-DD HH:mm:ss.SSS} "
+                "| {level: <8} "
+                "| {extra[component]: <30} "
+                "| {message}"
+                "{extra[context]}"
+            ),
+        )
 
 
 def get_logger(component: str) -> Any:
