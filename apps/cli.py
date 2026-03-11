@@ -35,6 +35,7 @@ from workflows.double_check import DoubleCheckWorkflow
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 LOGGER = get_logger(__name__)
+WORKSPACE_ENV_VAR = "LTA_WORKSPACE_ROOT"
 
 try:
     import typer
@@ -49,7 +50,12 @@ if typer is not None:
     @app.command("discover")
     def discover(
         config_path: Path,
-        workspace_root: Path = Path("workspace"),
+        workspace_root: Path = typer.Option(
+            Path("workspace"),
+            "--workspace-root",
+            envvar=WORKSPACE_ENV_VAR,
+            help="Workspace root containing topic directories. Supports LTA_WORKSPACE_ROOT.",
+        ),
         ccf_mapping_path: Path = PROJECT_ROOT / "config" / "ccf_venues.json",
         render_markdown: bool = True,
         reuse_paper_list: bool = False,
@@ -110,7 +116,12 @@ if typer is not None:
     @topic_app.command("parse")
     def parse_topic(
         topic: str = typer.Option(..., "--topic", help="Topic slug under the workspace root."),
-        workspace_root: Path = typer.Option(Path("workspace"), help="Workspace root containing topic directories."),
+        workspace_root: Path = typer.Option(
+            Path("workspace"),
+            "--workspace-root",
+            envvar=WORKSPACE_ENV_VAR,
+            help="Workspace root containing topic directories. Supports LTA_WORKSPACE_ROOT.",
+        ),
         top_n: int = typer.Option(20, min=1, help="Parse at most this many papers by priority."),
         paper_id: str | None = typer.Option(None, help="Parse only the specified paper."),
         force: bool = typer.Option(False, help="Re-parse papers even if they are already marked parsed."),
@@ -143,7 +154,12 @@ if typer is not None:
     @topic_app.command("analyze")
     def analyze_topic(
         topic: str = typer.Option(..., "--topic", help="Topic slug under the workspace root."),
-        workspace_root: Path = typer.Option(Path("workspace"), help="Workspace root containing topic directories."),
+        workspace_root: Path = typer.Option(
+            Path("workspace"),
+            "--workspace-root",
+            envvar=WORKSPACE_ENV_VAR,
+            help="Workspace root containing topic directories. Supports LTA_WORKSPACE_ROOT.",
+        ),
         top_n: int = typer.Option(20, min=1, help="Analyze at most this many papers."),
         ccf: str = typer.Option("A,B", "--ccf", help="Comma-separated CCF ranks to prioritize, e.g. A,B."),
         model: str = typer.Option("mimo-v2-flash", help="LLM model name."),
@@ -175,7 +191,12 @@ if typer is not None:
     @topic_app.command("survey-build")
     def survey_build(
         topic: str = typer.Option(..., "--topic", help="Topic slug under the workspace root."),
-        workspace_root: Path = typer.Option(Path("workspace"), help="Workspace root containing topic directories."),
+        workspace_root: Path = typer.Option(
+            Path("workspace"),
+            "--workspace-root",
+            envvar=WORKSPACE_ENV_VAR,
+            help="Workspace root containing topic directories. Supports LTA_WORKSPACE_ROOT.",
+        ),
     ) -> None:
         """Build the grouped survey LaTeX report from analyzed papers."""
 
@@ -191,7 +212,12 @@ if typer is not None:
     @topic_app.command("double-check")
     def double_check_topic(
         topic: str = typer.Option(..., "--topic", help="Topic slug under the workspace root."),
-        workspace_root: Path = typer.Option(Path("workspace"), help="Workspace root containing topic directories."),
+        workspace_root: Path = typer.Option(
+            Path("workspace"),
+            "--workspace-root",
+            envvar=WORKSPACE_ENV_VAR,
+            help="Workspace root containing topic directories. Supports LTA_WORKSPACE_ROOT.",
+        ),
         pdf_dir: Path | None = typer.Option(None, "--pdf-dir", help="Optional PDF root to scan. Defaults to the whole topic directory."),
         backend: str = typer.Option("pymupdf", help="Parser backend to use."),
         force_reparse: bool = typer.Option(False, help="Re-parse PDFs even if they already have parse artifacts."),
@@ -221,7 +247,12 @@ if typer is not None:
     @topic_app.command("survey-compile")
     def survey_compile(
         topic: str = typer.Option(..., "--topic", help="Topic slug under the workspace root."),
-        workspace_root: Path = typer.Option(Path("workspace"), help="Workspace root containing topic directories."),
+        workspace_root: Path = typer.Option(
+            Path("workspace"),
+            "--workspace-root",
+            envvar=WORKSPACE_ENV_VAR,
+            help="Workspace root containing topic directories. Supports LTA_WORKSPACE_ROOT.",
+        ),
         engine: str = typer.Option("latexmk", help="Compiler executable. `latexmk` defaults to `latexmk -xelatex`."),
     ) -> None:
         """Compile the generated survey LaTeX locally."""

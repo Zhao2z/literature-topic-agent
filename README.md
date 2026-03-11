@@ -22,6 +22,14 @@ uv python install 3.11
 uv sync --python 3.11 --dev
 ```
 
+可选：设置统一工作区环境变量。设置后，所有 CLI 命令都会默认使用该目录作为 `workspace_root`。
+
+```bash
+export LTA_WORKSPACE_ROOT=/Users/zhao2z/Documents/Projects/LTA-Workspace
+```
+
+建议把这一行加入 `~/.zshrc`。
+
 ## 2. 查看 CLI 帮助
 
 ```bash
@@ -34,12 +42,14 @@ uv run literature-topic-agent --help
 uv run python -m apps.cli --help
 ```
 
+如果已经设置 `LTA_WORKSPACE_ROOT`，后续命令可以不再显式传 `--workspace-root`。
+
 ## 3. 一条命令跑通（推荐先用示例配置）
 
 ```bash
 uv run literature-topic-agent \
   config/example_topic.yaml \
-  --workspace-root ./workspace
+  --workspace-root /Users/zhao2z/Documents/Projects/LTA-Workspace
 ```
 
 等价模块方式：
@@ -47,7 +57,7 @@ uv run literature-topic-agent \
 ```bash
 uv run python -m apps.cli \
   config/example_topic.yaml \
-  --workspace-root ./workspace
+  --workspace-root /Users/zhao2z/Documents/Projects/LTA-Workspace
 ```
 
 ## 4. 自定义主题配置并运行
@@ -65,7 +75,7 @@ cp config/example_topic.yaml config/my_topic.yaml
 ```bash
 uv run literature-topic-agent \
   config/my_topic.yaml \
-  --workspace-root ./workspace
+  --workspace-root /Users/zhao2z/Documents/Projects/LTA-Workspace
 ```
 
 ## 5. 常用运行命令
@@ -74,7 +84,7 @@ uv run literature-topic-agent \
 
 ```bash
 uv run literature-topic-agent config/example_topic.yaml \
-  --workspace-root ./workspace \
+  --workspace-root /Users/zhao2z/Documents/Projects/LTA-Workspace \
   --render-markdown
 ```
 
@@ -82,7 +92,7 @@ uv run literature-topic-agent config/example_topic.yaml \
 
 ```bash
 uv run literature-topic-agent config/example_topic.yaml \
-  --workspace-root ./workspace \
+  --workspace-root /Users/zhao2z/Documents/Projects/LTA-Workspace \
   --no-render-markdown
 ```
 
@@ -90,7 +100,7 @@ uv run literature-topic-agent config/example_topic.yaml \
 
 ```bash
 uv run literature-topic-agent config/example_topic.yaml \
-  --workspace-root ./workspace \
+  --workspace-root /Users/zhao2z/Documents/Projects/LTA-Workspace \
   --reuse-paper-list \
   --retry-failed-only
 ```
@@ -99,7 +109,7 @@ uv run literature-topic-agent config/example_topic.yaml \
 
 ```bash
 uv run literature-topic-agent config/example_topic.yaml \
-  --workspace-root ./workspace \
+  --workspace-root /Users/zhao2z/Documents/Projects/LTA-Workspace \
   --reuse-paper-list \
   --no-retry-failed-only \
   --retry-limit 20
@@ -117,7 +127,7 @@ uv run literature-topic-agent config/example_topic.yaml \
 假设 `slug: test-case-generation`，典型目录如下：
 
 ```text
-workspace/test-case-generation/
+/Users/zhao2z/Documents/Projects/LTA-Workspace/test-case-generation/
 ├── artifacts/
 │   ├── papers.json
 │   └── job.json
@@ -136,18 +146,18 @@ workspace/test-case-generation/
 
 ```bash
 # 查看报告
-sed -n '1,120p' workspace/test-case-generation/summary.md
+sed -n '1,120p' /Users/zhao2z/Documents/Projects/LTA-Workspace/test-case-generation/summary.md
 
 # 查看论文数量（JSON）
 uv run python - <<'PY'
 import json
 from pathlib import Path
-p = Path("workspace/test-case-generation/artifacts/papers.json")
+p = Path("/Users/zhao2z/Documents/Projects/LTA-Workspace/test-case-generation/artifacts/papers.json")
 print(len(json.loads(p.read_text(encoding="utf-8"))))
 PY
 
 # 查看 SQLite 中前 20 条论文
-sqlite3 workspace/test-case-generation/index.sqlite3 \
+sqlite3 /Users/zhao2z/Documents/Projects/LTA-Workspace/test-case-generation/index.sqlite3 \
   "select title, year, ccf_rank, status from papers order by processing_priority asc limit 20;"
 ```
 
@@ -179,7 +189,7 @@ uv run pytest -q -k "ranking or deduplication"
 uv run python - <<'PY'
 import json
 from pathlib import Path
-p = Path("workspace/test-case-generation/artifacts/papers.json")
+p = Path("/Users/zhao2z/Documents/Projects/LTA-Workspace/test-case-generation/artifacts/papers.json")
 rows = json.loads(p.read_text(encoding="utf-8"))
 failed = [x for x in rows if x.get("download_failure_code")]
 print(f"failed={len(failed)}")
@@ -192,9 +202,18 @@ PY
 
 ```bash
 uv run literature-topic-agent config/example_topic.yaml \
-  --workspace-root ./workspace \
+  --workspace-root /Users/zhao2z/Documents/Projects/LTA-Workspace \
   --reuse-paper-list \
   --retry-failed-only
+```
+
+Topic 子命令同样支持环境变量默认工作区，例如：
+
+```bash
+uv run python apps/cli.py topic parse --topic test-case-generation
+uv run python apps/cli.py topic analyze --topic test-case-generation --top-n 20 --ccf A,B
+uv run python apps/cli.py topic survey-build --topic test-case-generation
+uv run python apps/cli.py topic survey-compile --topic test-case-generation
 ```
 
 ## 9. CCF 映射来源
@@ -205,7 +224,7 @@ uv run literature-topic-agent config/example_topic.yaml \
 
 ```bash
 uv run literature-topic-agent config/example_topic.yaml \
-  --workspace-root ./workspace \
+  --workspace-root /Users/zhao2z/Documents/Projects/LTA-Workspace \
   --ccf-mapping-path /path/to/your/ccf_mapping.json
 ```
 

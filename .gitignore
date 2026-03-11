@@ -30,10 +30,6 @@ pip-wheel-metadata/
 .idea/
 .vscode/
 
-# Local runtime data
-# Keep shareable workspace outputs (papers/artifacts/summary/topic),
-# but ignore machine-local runtime files.
-workspace/**/index.sqlite3
-workspace/**/logs/
-workspace/**/logs/**
+# Local runtime and synced workspace data
+workspace/
 temp/
