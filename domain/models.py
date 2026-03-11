@@ -23,6 +23,7 @@ class PaperStatus(str, Enum):
     RANKED = "ranked"
     DOWNLOADED = "downloaded"
     PARSED = "parsed"
+    ANALYZED = "analyzed"
     SUMMARIZED = "summarized"
     EXPORTED = "exported"
     FAILED = "failed"
@@ -99,6 +100,7 @@ class PaperTimestamps(BaseModel):
     discovered_at: datetime = Field(default_factory=utc_now)
     downloaded_at: datetime | None = None
     parsed_at: datetime | None = None
+    analyzed_at: datetime | None = None
     summarized_at: datetime | None = None
     exported_at: datetime | None = None
 
@@ -133,6 +135,14 @@ class PaperRecord(BaseModel):
     download_source: str | None = None
     local_pdf_path: str | None = None
     sections: dict[str, str] = Field(default_factory=dict)
+    section_metadata: dict[str, Any] = Field(default_factory=dict)
+    parse_warnings: list[str] = Field(default_factory=list)
+    parse_artifact_paths: dict[str, str] = Field(default_factory=dict)
+    llm_analysis: dict[str, Any] | None = None
+    classification: dict[str, Any] = Field(default_factory=dict)
+    analysis_warnings: list[str] = Field(default_factory=list)
+    analysis_artifact_paths: dict[str, str] = Field(default_factory=dict)
+    analysis_model: str | None = None
     summary_short: str | None = None
     summary_structured: dict[str, Any] | None = None
     rank_score: float = 0.0
@@ -160,6 +170,7 @@ class JobStageCounts(BaseModel):
     ranked: int = 0
     downloaded: int = 0
     parsed: int = 0
+    analyzed: int = 0
     summarized: int = 0
     exported: int = 0
     failed: int = 0

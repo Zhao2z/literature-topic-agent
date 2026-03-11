@@ -44,6 +44,14 @@ class SQLiteStore:
                     download_source TEXT,
                     local_pdf_path TEXT,
                     sections_json TEXT NOT NULL,
+                    section_metadata_json TEXT NOT NULL DEFAULT '{}',
+                    parse_warnings_json TEXT NOT NULL DEFAULT '[]',
+                    parse_artifact_paths_json TEXT NOT NULL DEFAULT '{}',
+                    llm_analysis_json TEXT,
+                    classification_json TEXT NOT NULL DEFAULT '{}',
+                    analysis_warnings_json TEXT NOT NULL DEFAULT '[]',
+                    analysis_artifact_paths_json TEXT NOT NULL DEFAULT '{}',
+                    analysis_model TEXT,
                     summary_short TEXT,
                     summary_structured_json TEXT,
                     rank_score REAL NOT NULL,
@@ -58,6 +66,14 @@ class SQLiteStore:
             self._ensure_column(connection, "papers", "download_candidates_json", "TEXT NOT NULL DEFAULT '[]'")
             self._ensure_column(connection, "papers", "download_source", "TEXT")
             self._ensure_column(connection, "papers", "download_failure_code", "TEXT")
+            self._ensure_column(connection, "papers", "section_metadata_json", "TEXT NOT NULL DEFAULT '{}'")
+            self._ensure_column(connection, "papers", "parse_warnings_json", "TEXT NOT NULL DEFAULT '[]'")
+            self._ensure_column(connection, "papers", "parse_artifact_paths_json", "TEXT NOT NULL DEFAULT '{}'")
+            self._ensure_column(connection, "papers", "llm_analysis_json", "TEXT")
+            self._ensure_column(connection, "papers", "classification_json", "TEXT NOT NULL DEFAULT '{}'")
+            self._ensure_column(connection, "papers", "analysis_warnings_json", "TEXT NOT NULL DEFAULT '[]'")
+            self._ensure_column(connection, "papers", "analysis_artifact_paths_json", "TEXT NOT NULL DEFAULT '{}'")
+            self._ensure_column(connection, "papers", "analysis_model", "TEXT")
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS processing_jobs (
@@ -81,10 +97,12 @@ class SQLiteStore:
                 INSERT INTO papers (
                     paper_id, topic_slug, title, authors_json, venue, year, venue_type, ccf_rank,
                     dblp_url, doi, bibtex, citations, keyword_matches_json, download_candidates_json, landing_url, pdf_url,
-                    download_source, local_pdf_path, sections_json, summary_short, summary_structured_json, rank_score,
+                    download_source, local_pdf_path, sections_json, section_metadata_json, parse_warnings_json,
+                    parse_artifact_paths_json, llm_analysis_json, classification_json, analysis_warnings_json,
+                    analysis_artifact_paths_json, analysis_model, summary_short, summary_structured_json, rank_score,
                     processing_priority, status, last_error, download_failure_code, timestamps_json
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(paper_id) DO UPDATE SET
                     topic_slug=excluded.topic_slug,
                     title=excluded.title,
@@ -104,6 +122,14 @@ class SQLiteStore:
                     download_source=excluded.download_source,
                     local_pdf_path=excluded.local_pdf_path,
                     sections_json=excluded.sections_json,
+                    section_metadata_json=excluded.section_metadata_json,
+                    parse_warnings_json=excluded.parse_warnings_json,
+                    parse_artifact_paths_json=excluded.parse_artifact_paths_json,
+                    llm_analysis_json=excluded.llm_analysis_json,
+                    classification_json=excluded.classification_json,
+                    analysis_warnings_json=excluded.analysis_warnings_json,
+                    analysis_artifact_paths_json=excluded.analysis_artifact_paths_json,
+                    analysis_model=excluded.analysis_model,
                     summary_short=excluded.summary_short,
                     summary_structured_json=excluded.summary_structured_json,
                     rank_score=excluded.rank_score,
@@ -197,6 +223,14 @@ class SQLiteStore:
             paper.download_source,
             paper.local_pdf_path,
             json.dumps(paper.sections, ensure_ascii=False),
+            json.dumps(paper.section_metadata, ensure_ascii=False),
+            json.dumps(paper.parse_warnings, ensure_ascii=False),
+            json.dumps(paper.parse_artifact_paths, ensure_ascii=False),
+            json.dumps(paper.llm_analysis, ensure_ascii=False) if paper.llm_analysis else None,
+            json.dumps(paper.classification, ensure_ascii=False),
+            json.dumps(paper.analysis_warnings, ensure_ascii=False),
+            json.dumps(paper.analysis_artifact_paths, ensure_ascii=False),
+            paper.analysis_model,
             paper.summary_short,
             json.dumps(paper.summary_structured, ensure_ascii=False) if paper.summary_structured else None,
             paper.rank_score,

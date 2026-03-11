@@ -19,6 +19,7 @@ class TopicWorkspace:
         self.database_path = self.topic_dir / "index.sqlite3"
         self.papers_dir = self.topic_dir / "papers"
         self.logs_dir = self.topic_dir / "logs"
+        self.reports_dir = self.topic_dir / "reports"
 
     def ensure(self) -> None:
         """Create the workspace directories if they do not exist."""
@@ -27,6 +28,7 @@ class TopicWorkspace:
             self.topic_dir,
             self.artifacts_dir,
             self.logs_dir,
+            self.reports_dir,
             self.papers_dir,
             self.papers_dir / "CCF-A",
             self.papers_dir / "CCF-B",

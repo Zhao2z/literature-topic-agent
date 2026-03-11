@@ -1,0 +1,76 @@
+# {{ paper.title }}
+
+- Venue: `{{ paper.venue }}`
+- Year: `{{ paper.year }}`
+- Citation Key: `{{ paper.latex_fields.short_citation_key }}`
+
+## 研究背景与核心挑战
+
+- 核心问题: {{ paper.analysis.research_background_and_core_challenge.core_problem }}
+- 动机缺口: {{ paper.analysis.research_background_and_core_challenge.motivation_gap }}
+- 研究意义: {{ paper.analysis.research_background_and_core_challenge.significance }}
+
+## 研究方法与设计
+
+- 方法类型: {{ paper.analysis.research_methodology_and_design.methodology_type }}
+- 执行流程:
+{% for item in paper.analysis.research_methodology_and_design.execution_process %}
+  - {{ item }}
+{% endfor %}
+- 数据来源:
+{% for item in paper.analysis.research_methodology_and_design.data_sources %}
+  - {{ item }}
+{% endfor %}
+- 工具与技术:
+{% for item in paper.analysis.research_methodology_and_design.tools_techniques %}
+  - {{ item }}
+{% endfor %}
+- 评估指标:
+{% for item in paper.analysis.research_methodology_and_design.evaluation_metrics %}
+  - {{ item }}
+{% endfor %}
+
+## 核心发现与结论
+
+- 主要发现:
+{% for item in paper.analysis.key_findings_and_conclusions.major_findings %}
+  - {{ item }}
+{% endfor %}
+- 证据:
+{% for item in paper.analysis.key_findings_and_conclusions.evidence %}
+  - {{ item }}
+{% endfor %}
+- 非预期洞见:
+{% for item in paper.analysis.key_findings_and_conclusions.unexpected_insights %}
+  - {{ item }}
+{% endfor %}
+
+## 贡献、局限与启示
+
+- 学术贡献:
+{% for item in paper.analysis.contributions_limitations_and_implications.academic_contributions %}
+  - {{ item }}
+{% endfor %}
+- 局限与威胁:
+{% for item in paper.analysis.contributions_limitations_and_implications.limitations_threats %}
+  - {{ item }}
+{% endfor %}
+- 实践启示:
+{% for item in paper.analysis.contributions_limitations_and_implications.practical_implications %}
+  - {{ item }}
+{% endfor %}
+
+## 精炼摘要
+
+{{ paper.analysis.concise_summary }}
+
+## 分类
+
+- method_paradigm: `{{ paper.classification.method_paradigm }}`
+- target_languages: `{{ paper.classification.target_languages | join(', ') }}`
+- test_task_types: `{{ paper.classification.test_task_types | join(', ') }}`
+- input_context: `{{ paper.classification.input_context | join(', ') }}`
+- output_artifact: `{{ paper.classification.output_artifact | join(', ') }}`
+- validation_repair: `{{ paper.classification.validation_repair | join(', ') }}`
+- evaluation_scope: `{{ paper.classification.evaluation_scope | join(', ') }}`
+- contribution_type: `{{ paper.classification.contribution_type | join(', ') }}`

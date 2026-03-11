@@ -149,6 +149,53 @@ def test_candidate_builder_orders_candidates_by_priority() -> None:
     ]
 
 
+def test_download_paper_derives_ieee_stamp_from_doi_redirect(tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == "https://api.openalex.org/works/https://doi.org/10.1109/ASE63991.2025.00335":
+            return httpx.Response(
+                200,
+                json={"best_oa_location": {"landing_page_url": "https://doi.org/10.1109/ASE63991.2025.00335"}},
+                request=request,
+            )
+        if str(request.url) == "https://doi.org/10.1109/ASE63991.2025.00335":
+            return httpx.Response(
+                302,
+                headers={"location": "https://ieeexplore.ieee.org/document/11334356/"},
+                request=request,
+            )
+        if str(request.url) == "https://ieeexplore.ieee.org/document/11334356/":
+            return httpx.Response(
+                200,
+                headers={"content-type": "text/html; charset=utf-8"},
+                text="<html><body>No direct PDF link in page</body></html>",
+                request=request,
+            )
+        if str(request.url) == "https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=11334356":
+            return httpx.Response(
+                200,
+                headers={"content-type": "application/pdf"},
+                content=b"%PDF-1.4 ieee",
+                request=request,
+            )
+        raise AssertionError(f"Unexpected URL: {request.url}")
+
+    client = httpx.Client(transport=httpx.MockTransport(handler), follow_redirects=True)
+    downloader = CandidateDownloader(client=client)
+    workspace = build_workspace(tmp_path)
+    paper = build_paper(
+        title="NovaQ",
+        doi="10.1109/ASE63991.2025.00335",
+        landing_url=None,
+        pdf_url=None,
+    )
+
+    downloaded = downloader.download_paper(paper, workspace)
+
+    assert downloaded is True
+    assert paper.download_source == "openalex_oa_landing_derived_ieee_stamp"
+    assert paper.pdf_url == "https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=11334356"
+
+
 def test_candidate_builder_ignores_invalid_openalex_urls() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if str(request.url) == "https://api.openalex.org/works/https://doi.org/10.1000/example":

@@ -1,0 +1,6 @@
+\item {{ paper.year }} - {{ paper.venue | latex_escape }} - {{ paper.title | latex_escape }} ~\cite{ {{- paper.latex_fields.short_citation_key -}} }
+\par
+\textbf{方法与问题。} 该文针对 {{ paper.analysis.research_background_and_core_challenge.core_problem | latex_escape }}，采用 {{ paper.analysis.research_methodology_and_design.methodology_type | latex_escape }}。核心流程可概括为 {{ paper.latex_fields.method_steps | latex_join('；') }}。使用的信息上下文包括 {{ paper.classification.input_context | latex_join(', ') }}，输出工件主要为 {{ paper.classification.output_artifact | latex_join(', ') }}。
+
+\par
+\textbf{实验与结论。} 实验设置包括 {{ paper.latex_fields.experimental_setup | latex_join('；') }}。主要结果表明 {{ paper.latex_fields.main_results | latex_join('；') }}。论文报告的局限性包括 {{ paper.latex_fields.limitations | latex_join('；') }}。综述标签为 {{ paper.latex_fields.tags_for_survey | latex_join(', ') }}。

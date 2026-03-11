@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
+import re
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -188,6 +189,23 @@ class CandidateDownloader:
             return True, None
 
         media_type = _response_media_type(response)
+        derived_candidates = _derive_candidates_from_final_url(
+            final_url=final_url,
+            paper=paper,
+            parent_source=candidate.source,
+            priority=max(candidate.priority - 1, 1),
+        )
+        for derived_candidate in derived_candidates:
+            if derived_candidate.url == candidate.url:
+                continue
+            nested_success, detail = self._try_candidate(paper, workspace, derived_candidate)
+            if nested_success:
+                paper.landing_url = paper.landing_url or final_url
+                self._reset_domain_failures(domain)
+                return True, None
+            if detail is not None:
+                self._mark_failure(paper, detail["code"], detail["message"])
+
         if media_type in HTML_MEDIA_TYPES:
             landing_url = paper.landing_url or final_url
             for pdf_url in _extract_pdf_urls(response.text, base_url=final_url):
@@ -389,6 +407,11 @@ def _is_phase_one_candidate(candidate: DownloadCandidate) -> bool:
     if source in {
         "openalex_oa",
         "arxiv_pdf_rule",
+        "doi_resolved_derived_arxiv_pdf",
+        "doi_resolved_derived_ieee_stamp",
+        "doi_resolved_derived_ieee_stamp_alt",
+        "doi_resolved_derived_acm_pdf",
+        "doi_resolved_derived_springer_pdf",
         "springer_pdf_rule",
         "acm_pdf_rule",
         "ieee_pdf_direct",
@@ -402,3 +425,69 @@ def _is_phase_one_candidate(candidate: DownloadCandidate) -> bool:
     if source == "doi_resolved":
         return False
     return True
+
+
+def _derive_candidates_from_final_url(
+    *,
+    final_url: str,
+    paper: PaperRecord,
+    parent_source: str,
+    priority: int,
+) -> list[DownloadCandidate]:
+    parsed = urlparse(final_url)
+    derived: list[DownloadCandidate] = []
+
+    if parsed.netloc == "ieeexplore.ieee.org":
+        match = re.search(r"/document/(\d+)/?", parsed.path)
+        if match:
+            article_number = match.group(1)
+            derived.append(
+                DownloadCandidate(
+                    source=f"{parent_source}_derived_ieee_stamp",
+                    url=f"https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber={article_number}",
+                    priority=priority,
+                )
+            )
+            derived.append(
+                DownloadCandidate(
+                    source=f"{parent_source}_derived_ieee_stamp_alt",
+                    url=f"https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber={article_number}",
+                    priority=max(priority - 1, 1),
+                )
+            )
+
+    if parsed.netloc == "dl.acm.org" and paper.doi:
+        derived.append(
+            DownloadCandidate(
+                source=f"{parent_source}_derived_acm_pdf",
+                url=f"https://dl.acm.org/doi/pdf/{paper.doi}",
+                priority=priority,
+            )
+        )
+
+    if parsed.netloc == "link.springer.com" and paper.doi:
+        normalized_doi = paper.doi.lower()
+        derived.append(
+            DownloadCandidate(
+                source=f"{parent_source}_derived_springer_pdf",
+                url=f"https://link.springer.com/content/pdf/{normalized_doi}.pdf",
+                priority=priority,
+            )
+        )
+
+    if parsed.netloc == "arxiv.org" and parsed.path.startswith("/abs/"):
+        derived.append(
+            DownloadCandidate(
+                source=f"{parent_source}_derived_arxiv_pdf",
+                url=f"https://arxiv.org/pdf/{parsed.path.removeprefix('/abs/')}",
+                priority=priority,
+            )
+        )
+
+    deduplicated: list[DownloadCandidate] = []
+    seen: set[str] = set()
+    for candidate in derived:
+        if candidate.url not in seen:
+            seen.add(candidate.url)
+            deduplicated.append(candidate)
+    return deduplicated

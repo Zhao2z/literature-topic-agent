@@ -1,0 +1,11 @@
+{% for group in groups %}
+\section{ {{ group.method_paradigm_label }} }
+{% for language_group in group.languages %}
+\subsection{ {{ language_group.language_label }} }
+\begin{itemize}[leftmargin=1.5em]
+{% for paper in language_group.papers %}
+{% include "survey/paper_entry.tex.j2" %}
+{% endfor %}
+\end{itemize}
+{% endfor %}
+{% endfor %}
