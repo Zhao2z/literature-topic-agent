@@ -51,3 +51,20 @@ def test_mimo_client_rejects_non_json_response() -> None:
 
     with pytest.raises(LlmClientError):
         client.generate_json(messages=[{"role": "user", "content": "hello"}], model="mimo-v2-flash")
+
+
+def test_mimo_client_returns_text_string() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        assert "response_format" not in body
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "plain text"}}]},
+            request=request,
+        )
+
+    client = MimoClient(api_key="secret", client=httpx.Client(transport=httpx.MockTransport(handler)))
+
+    result = client.generate_text(messages=[{"role": "user", "content": "hello"}], model="mimo-v2-flash")
+
+    assert result == "plain text"

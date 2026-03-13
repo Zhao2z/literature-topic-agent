@@ -3,6 +3,7 @@
 - Venue: `{{ paper.venue }}`
 - Year: `{{ paper.year }}`
 - Citation Key: `{{ paper.latex_fields.short_citation_key }}`
+- Baselines: `{{ paper.latex_fields.baseline_methods | join(', ') }}`
 
 ## 研究背景与核心挑战
 
@@ -27,6 +28,10 @@
 {% endfor %}
 - 评估指标:
 {% for item in paper.analysis.research_methodology_and_design.evaluation_metrics %}
+  - {{ item }}
+{% endfor %}
+- 对比基线:
+{% for item in paper.latex_fields.baseline_methods %}
   - {{ item }}
 {% endfor %}
 

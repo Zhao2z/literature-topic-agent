@@ -5,4 +5,4 @@
 本文聚焦于 {{ paper.analysis.research_background_and_core_challenge.core_problem | latex_escape }}。研究动机在于 {{ paper.analysis.research_background_and_core_challenge.motivation_gap | latex_escape }}。方法上属于 {{ paper.analysis.research_methodology_and_design.methodology_type | latex_escape }}，核心流程包括 {{ paper.latex_fields.method_steps | latex_join('；') }}。使用的信息与上下文主要体现为 {{ paper.classification.input_context | latex_join(', ') }}，目标输出工件为 {{ paper.classification.output_artifact | latex_join(', ') }}。
 
 \paragraph{实验与结论}
-实验设置可概括为 {{ paper.latex_fields.experimental_setup | latex_join('；') }}。主要结果包括 {{ paper.latex_fields.main_results | latex_join('；') }}。论文指出的局限性包括 {{ paper.latex_fields.limitations | latex_join('；') }}。用于综述归类的标签包括 {{ paper.latex_fields.tags_for_survey | latex_join(', ') }}。
+实验设置可概括为 {{ paper.latex_fields.experimental_setup | latex_join('；') }}。{% if paper.latex_fields.baseline_methods %}对比基线包括 {{ paper.latex_fields.baseline_methods | latex_join('、') }}。{% endif %}主要结果包括 {{ paper.latex_fields.main_results | latex_join('；') }}。论文指出的局限性包括 {{ paper.latex_fields.limitations | latex_join('；') }}。用于综述归类的标签包括 {{ paper.latex_fields.tags_for_survey | latex_join(', ') }}。

@@ -6,6 +6,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+EMPTY_ARRAY_DESCRIPTION = "If none, return an empty array []."
+
 MethodParadigm = Literal[
     "llm_based",
     "search_based",
@@ -92,26 +94,26 @@ class ResearchMethodologyAndDesign(BaseModel):
     """Methodological description."""
 
     methodology_type: str
-    execution_process: list[str] = Field(default_factory=list)
-    data_sources: list[str] = Field(default_factory=list)
-    tools_techniques: list[str] = Field(default_factory=list)
-    evaluation_metrics: list[str] = Field(default_factory=list)
+    execution_process: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    data_sources: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    tools_techniques: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    evaluation_metrics: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
 
 
 class KeyFindingsAndConclusions(BaseModel):
     """Findings summary."""
 
-    major_findings: list[str] = Field(default_factory=list)
-    evidence: list[str] = Field(default_factory=list)
-    unexpected_insights: list[str] = Field(default_factory=list)
+    major_findings: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    evidence: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    unexpected_insights: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
 
 
 class ContributionsLimitationsAndImplications(BaseModel):
     """Contributions and limitations."""
 
-    academic_contributions: list[str] = Field(default_factory=list)
-    limitations_threats: list[str] = Field(default_factory=list)
-    practical_implications: list[str] = Field(default_factory=list)
+    academic_contributions: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    limitations_threats: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    practical_implications: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
 
 
 class AnalysisBody(BaseModel):
@@ -128,13 +130,13 @@ class ClassificationResult(BaseModel):
     """Taxonomy classification for survey building."""
 
     method_paradigm: MethodParadigm
-    target_languages: list[TargetLanguage] = Field(default_factory=list)
-    test_task_types: list[TestTaskType] = Field(default_factory=list)
-    input_context: list[InputContext] = Field(default_factory=list)
-    output_artifact: list[OutputArtifact] = Field(default_factory=list)
-    validation_repair: list[ValidationRepair] = Field(default_factory=list)
-    evaluation_scope: list[EvaluationScope] = Field(default_factory=list)
-    contribution_type: list[ContributionType] = Field(default_factory=list)
+    target_languages: list[TargetLanguage] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    test_task_types: list[TestTaskType] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    input_context: list[InputContext] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    output_artifact: list[OutputArtifact] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    validation_repair: list[ValidationRepair] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    evaluation_scope: list[EvaluationScope] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    contribution_type: list[ContributionType] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
 
     @field_validator(
         "target_languages",
@@ -158,11 +160,12 @@ class LatexFields(BaseModel):
     short_citation_key: str
     paper_label: str
     one_paragraph_summary: str
-    method_steps: list[str] = Field(default_factory=list)
-    experimental_setup: list[str] = Field(default_factory=list)
-    main_results: list[str] = Field(default_factory=list)
-    limitations: list[str] = Field(default_factory=list)
-    tags_for_survey: list[str] = Field(default_factory=list)
+    method_steps: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    experimental_setup: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    baseline_methods: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    main_results: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    limitations: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
+    tags_for_survey: list[str] = Field(default_factory=list, description=EMPTY_ARRAY_DESCRIPTION)
 
 
 class PaperAnalysisSchema(BaseModel):
@@ -184,4 +187,5 @@ class AnalysisArtifactBundle(BaseModel):
     model: str
     provider: str
     prompt_version: str
+    prompt_messages: list[dict[str, str]] = Field(default_factory=list)
     raw_response: str | None = None

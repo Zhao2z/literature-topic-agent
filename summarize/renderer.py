@@ -9,6 +9,27 @@ from jinja2 import Environment, FileSystemLoader
 
 from summarize.schemas import PaperAnalysisSchema
 
+UNICODE_LATEX_REPLACEMENTS = {
+    "τ": r"$\tau$",
+    "α": r"$\alpha$",
+    "β": r"$\beta$",
+    "γ": r"$\gamma$",
+    "λ": r"$\lambda$",
+    "μ": r"$\mu$",
+    "σ": r"$\sigma$",
+    "Δ": r"$\Delta$",
+    "≤": r"$\leq$",
+    "≥": r"$\geq$",
+    "≈": r"$\approx$",
+    "≠": r"$\neq$",
+    "±": r"$\pm$",
+    "∼": r"$\sim$",
+}
+VENUE_ABBREVIATIONS = {
+    "IEEE Trans. Software Eng.": "TSE",
+    "ACM Trans. Softw. Eng. Methodol.": "TOSEM",
+}
+
 
 class AnalysisRenderer:
     """Renderer for Markdown, per-paper LaTeX, and survey documents."""
@@ -18,6 +39,7 @@ class AnalysisRenderer:
         self.environment = Environment(loader=FileSystemLoader(self.template_root), autoescape=False, trim_blocks=True, lstrip_blocks=True)
         self.environment.filters["latex_escape"] = _latex_escape
         self.environment.filters["latex_join"] = _latex_join
+        self.environment.filters["venue_label"] = _venue_label
 
     def render_markdown(self, analysis: PaperAnalysisSchema) -> str:
         """Render per-paper Markdown."""
@@ -54,8 +76,15 @@ def _latex_escape(value: Any) -> str:
     }
     for source, target in replacements.items():
         text = text.replace(source, target)
+    for source, target in UNICODE_LATEX_REPLACEMENTS.items():
+        text = text.replace(source, target)
     return text
 
 
 def _latex_join(values: list[Any], separator: str = "；") -> str:
     return separator.join(_latex_escape(value) for value in values)
+
+
+def _venue_label(value: Any) -> str:
+    text = str(value)
+    return VENUE_ABBREVIATIONS.get(text, text)

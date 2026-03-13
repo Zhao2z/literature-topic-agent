@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from domain.models import PaperRecord, ProcessingJob
 
@@ -35,4 +36,11 @@ class JsonArtifactStore:
 
         path = self.artifacts_dir / filename
         path.write_text(json.dumps(job.model_dump(mode="json"), ensure_ascii=False, indent=2), encoding="utf-8")
+        return path
+
+    def save_json(self, payload: Any, filename: str) -> Path:
+        """Write an arbitrary JSON payload to disk."""
+
+        path = self.artifacts_dir / filename
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         return path

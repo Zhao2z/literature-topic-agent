@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
-import subprocess
 
 from core.logging import configure_logging
 from core.logging import get_logger
 from domain.models import JobStageCounts, PaperStatus, ProcessingJob
+from download.artifacts import build_download_candidates_payload
 from download.pdf import DoiPdfDownloader
 from exporters.markdown import MarkdownReportExporter
 from parse.parser_service import ParserService
@@ -30,8 +30,9 @@ from topic.loader import load_topic_config
 from topic.workspace import TopicWorkspace
 from workflows.discovery import DiscoveryWorkflow
 from workflows.parse import ParseWorkflow
-from summarize.workflow import AnalysisWorkflow, SurveyBuilder
+from summarize.workflow import AnalysisWorkflow, SurveyBuilder, compile_survey_report
 from workflows.double_check import DoubleCheckWorkflow
+from workflows.rank_repair import RankRepairWorkflow
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 LOGGER = get_logger(__name__)
@@ -179,6 +180,8 @@ if typer is not None:
             renderer=renderer,
             sqlite_store=sqlite_store,
             json_store=json_store,
+            auto_build_survey=True,
+            auto_compile_survey=True,
         )
         workflow.run(
             topic_config=topic_config,
@@ -218,7 +221,7 @@ if typer is not None:
             envvar=WORKSPACE_ENV_VAR,
             help="Workspace root containing topic directories. Supports LTA_WORKSPACE_ROOT.",
         ),
-        pdf_dir: Path | None = typer.Option(None, "--pdf-dir", help="Optional PDF root to scan. Defaults to the whole topic directory."),
+        pdf_dir: Path | None = typer.Option(None, "--pdf-dir", help="Optional PDF root to scan. Defaults to `manual_pdfs/` or `manual-pdfs/`, then the whole topic directory."),
         backend: str = typer.Option("pymupdf", help="Parser backend to use."),
         force_reparse: bool = typer.Option(False, help="Re-parse PDFs even if they already have parse artifacts."),
     ) -> None:
@@ -233,7 +236,14 @@ if typer is not None:
         parser_service = ParserService(PageTextExtractor(build_pdf_backend(backend)))
         workflow = DoubleCheckWorkflow(
             parser_service=parser_service,
-            search_provider=DblpSearchClient(),
+            search_provider=FallbackSearchProvider(
+                [
+                    DblpSearchClient(),
+                    SemanticScholarSearchClient(),
+                    GoogleScholarSearchClient(),
+                ]
+            ),
+            venue_rank_provider=LocalCcfRankProvider(PROJECT_ROOT / "config" / "ccf_venues.json"),
             sqlite_store=sqlite_store,
             json_store=json_store,
         )
@@ -242,6 +252,46 @@ if typer is not None:
             workspace=workspace,
             pdf_root=pdf_dir,
             force_reparse=force_reparse,
+        )
+
+    @topic_app.command("download-retry")
+    def download_retry_topic(
+        topic: str = typer.Option(..., "--topic", help="Topic slug under the workspace root."),
+        workspace_root: Path = typer.Option(
+            Path("workspace"),
+            "--workspace-root",
+            envvar=WORKSPACE_ENV_VAR,
+            help="Workspace root containing topic directories. Supports LTA_WORKSPACE_ROOT.",
+        ),
+        failed_only: bool = typer.Option(True, "--failed-only/--all-missing", help="Retry only papers with recorded download failures, or all papers missing local PDFs."),
+        limit: int | None = typer.Option(None, min=1, help="Retry at most this many papers."),
+        download_timeout: float = typer.Option(120.0, help="HTTP timeout in seconds."),
+        download_attempts: int = typer.Option(5, help="Max HTTP attempts per candidate."),
+        download_workers: int = typer.Option(4, help="Parallel download worker count."),
+        challenge_block_threshold: int = typer.Option(3, help="Temporarily block domains after this many challenge failures."),
+    ) -> None:
+        """Retry downloading papers from the saved paper list."""
+
+        topic_config = _load_workspace_topic_config(workspace_root=workspace_root, topic_slug=topic)
+        workspace = TopicWorkspace(workspace_root, topic_config)
+        workspace.ensure()
+        configure_logging(log_file=workspace.logs_dir / "download-retry.log")
+        json_store = JsonArtifactStore(workspace.artifacts_dir)
+        sqlite_store = SQLiteStore(workspace.database_path)
+        downloader = DoiPdfDownloader(
+            timeout=download_timeout,
+            max_request_attempts=download_attempts,
+            max_workers=download_workers,
+            challenge_block_threshold=challenge_block_threshold,
+        )
+        _retry_downloads_from_saved_papers(
+            topic_config=topic_config,
+            workspace=workspace,
+            json_store=json_store,
+            sqlite_store=sqlite_store,
+            downloader=downloader,
+            retry_failed_only=failed_only,
+            retry_limit=limit,
         )
 
     @topic_app.command("survey-compile")
@@ -259,12 +309,30 @@ if typer is not None:
 
         topic_config = _load_workspace_topic_config(workspace_root=workspace_root, topic_slug=topic)
         workspace = TopicWorkspace(workspace_root, topic_config)
-        survey_dir = workspace.reports_dir / "survey"
-        if engine == "latexmk":
-            command = [engine, "-xelatex", "main.tex"]
-        else:
-            command = [engine, "main.tex"]
-        subprocess.run(command, cwd=survey_dir, check=True)
+        compile_survey_report(workspace=workspace, engine=engine)
+
+    @topic_app.command("repair-ranks")
+    def repair_ranks_topic(
+        topic: str = typer.Option(..., "--topic", help="Topic slug under the workspace root."),
+        workspace_root: Path = typer.Option(
+            Path("workspace"),
+            "--workspace-root",
+            envvar=WORKSPACE_ENV_VAR,
+            help="Workspace root containing topic directories. Supports LTA_WORKSPACE_ROOT.",
+        ),
+        ccf_mapping_path: Path = PROJECT_ROOT / "config" / "ccf_venues.json",
+    ) -> None:
+        """Recompute CCF ranks for persisted papers and relocate misplaced files."""
+
+        topic_config = _load_workspace_topic_config(workspace_root=workspace_root, topic_slug=topic)
+        workspace = TopicWorkspace(workspace_root, topic_config)
+        workspace.ensure()
+        configure_logging(log_file=workspace.logs_dir / "repair-ranks.log")
+        RankRepairWorkflow(
+            venue_rank_provider=LocalCcfRankProvider(ccf_mapping_path),
+            sqlite_store=SQLiteStore(workspace.database_path),
+            json_store=JsonArtifactStore(workspace.artifacts_dir),
+        ).run(workspace=workspace)
 
     app.add_typer(topic_app, name="topic")
 
@@ -350,6 +418,7 @@ def _retry_downloads_from_saved_papers(
     sqlite_store.upsert_papers(papers)
     sqlite_store.save_job(job)
     json_store.save_papers(papers)
+    json_store.save_json(build_download_candidates_payload(papers), "download_candidates.json")
     json_store.save_job(job)
     LOGGER.bind(
         topic=topic_config.slug,

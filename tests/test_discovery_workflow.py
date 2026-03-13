@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from apps.cli import _retry_downloads_from_saved_papers
@@ -162,6 +163,9 @@ def test_retry_downloads_from_saved_paper_list_only_retries_failed_items(tmp_pat
     assert retried["paper-2"].download_failure_code is None
     assert retried["paper-2"].local_pdf_path is not None
     assert Path(retried["paper-2"].local_pdf_path).exists()
+    candidates_payload = json.loads((workspace.artifacts_dir / "download_candidates.json").read_text(encoding="utf-8"))
+    assert len(candidates_payload) == 2
+    assert any(item["paper_id"] == "paper-2" for item in candidates_payload)
 
 
 def test_workflow_preserves_existing_paper_list_when_search_returns_empty(tmp_path: Path) -> None:

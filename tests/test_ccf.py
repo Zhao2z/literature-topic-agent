@@ -14,6 +14,35 @@ def test_ccf_mapping_is_case_insensitive(tmp_path: Path) -> None:
     assert provider.get_rank("Unknown Venue") == "Unranked"
 
 
+def test_simple_json_mapping_supports_aliases_and_dblp_prefixes(tmp_path: Path) -> None:
+    mapping_path = tmp_path / "ccf.json"
+    mapping_path.write_text('{"TSE": "A", "ICLR": "A", "ICPC": "B"}', encoding="utf-8")
+
+    provider = LocalCcfRankProvider(mapping_path)
+
+    assert provider.get_rank("IEEE Trans. Software Eng.") == "A"
+    assert provider.get_rank("International Conference on Learning Representations") == "A"
+    assert provider.get_rank("IEEE International Conference on Program Comprehension") == "B"
+    assert provider.get_rank("Unknown", "https://dblp.org/rec/journals/tse/HayetSd25") == "A"
+    assert provider.get_rank("Unknown", "https://dblp.org/rec/conf/iclr/JainSR25") == "A"
+    assert provider.get_rank("Unknown", "https://dblp.org/rec/conf/icpc/Foo25") == "B"
+
+
+def test_simple_json_mapping_reads_override_file(tmp_path: Path) -> None:
+    mapping_path = tmp_path / "ccf.json"
+    mapping_path.write_text('{"ICSE": "A"}', encoding="utf-8")
+    (tmp_path / "ccf_overrides.json").write_text(
+        '{"venues":{"IEEE Software":"B","SEIP ICSE":"A"},"dblp_prefixes":{"/conf/date":"B"}}',
+        encoding="utf-8",
+    )
+
+    provider = LocalCcfRankProvider(mapping_path)
+
+    assert provider.get_rank("IEEE Software") == "B"
+    assert provider.get_rank("SEIP ICSE") == "A"
+    assert provider.get_rank("Unknown", "https://dblp.org/rec/conf/date/Foo25") == "B"
+
+
 def test_ccfrank_directory_matches_by_abbr_full_name_and_dblp_url(tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     data_dir.mkdir()

@@ -10,6 +10,16 @@ class AbstractLlmClient(ABC):
     """Abstract interface for structured JSON generation."""
 
     @abstractmethod
+    def generate_text(
+        self,
+        *,
+        messages: list[dict[str, str]],
+        model: str,
+        temperature: float = 0.1,
+    ) -> str:
+        """Generate plain text from chat messages."""
+
+    @abstractmethod
     def generate_json(
         self,
         *,

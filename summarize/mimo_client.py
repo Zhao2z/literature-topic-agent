@@ -75,6 +75,34 @@ class MimoClient(AbstractLlmClient):
             response_schema=response_schema,
             temperature=temperature,
         )
+        return self._post_json(payload)
+
+    def generate_text(
+        self,
+        *,
+        messages: list[dict[str, str]],
+        model: str,
+        temperature: float = 0.1,
+    ) -> str:
+        """Call Mimo and return assistant text content."""
+
+        payload = self.build_payload(
+            messages=messages,
+            model=model,
+            response_schema=None,
+            temperature=temperature,
+        )
+        payload.pop("response_format", None)
+        return self._post_text(payload)
+
+    def _post_json(self, payload: dict[str, Any]) -> str:
+        content = self._post_text(payload)
+        _ensure_valid_json(content)
+        return content.strip()
+
+    def _post_text(self, payload: dict[str, Any]) -> str:
+        """Submit request payload and return assistant text."""
+
         response = self._client.post(self.base_url, headers=self.build_headers(), json=payload)
         response.raise_for_status()
         data = response.json()
@@ -86,7 +114,6 @@ class MimoClient(AbstractLlmClient):
             content = "".join(item.get("text", "") for item in content if isinstance(item, dict))
         if not isinstance(content, str) or not content.strip():
             raise LlmClientError("Mimo returned empty content.")
-        _ensure_valid_json(content)
         return content.strip()
 
 

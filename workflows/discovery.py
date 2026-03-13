@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from core.logging import get_logger
+from download.artifacts import build_download_candidates_payload
 from download.interfaces import AbstractPaperDownloader
 from core.ranking import assign_processing_priority, compute_rank_score
 from domain.deduplication import deduplicate_papers
@@ -85,6 +86,7 @@ class DiscoveryWorkflow:
         self.sqlite_store.upsert_papers(ranked)
         self.sqlite_store.save_job(job)
         self.json_store.save_papers(ranked)
+        self.json_store.save_json(build_download_candidates_payload(ranked), "download_candidates.json")
         self.json_store.save_job(job)
         return ranked, job
 

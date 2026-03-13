@@ -20,6 +20,14 @@ TAXONOMY_ALIASES = {
         "js": "javascript",
         "unspecified": "language_unspecified",
     },
+    "test_task_types": {
+        "test_generation": "unit_test_generation",
+        "test generation": "unit_test_generation",
+        "test case generation": "unit_test_generation",
+        "unit tests generation": "unit_test_generation",
+        "unit test generation": "unit_test_generation",
+        "unit testing": "unit_test_generation",
+    },
 }
 
 LIST_FIELDS = {
@@ -50,6 +58,8 @@ def normalize_analysis_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(items, list):
             continue
         aliases = TAXONOMY_ALIASES.get(field_name, {})
-        normalized_classification[field_name] = [aliases.get(str(item).strip().lower(), item) for item in items]
+        normalized_classification[field_name] = list(
+            dict.fromkeys(aliases.get(str(item).strip().lower(), item) for item in items)
+        )
     normalized["classification"] = normalized_classification
     return normalized

@@ -20,6 +20,7 @@ class TopicWorkspace:
         self.papers_dir = self.topic_dir / "papers"
         self.logs_dir = self.topic_dir / "logs"
         self.reports_dir = self.topic_dir / "reports"
+        self.manual_pdfs_dir = self.topic_dir / "manual_pdfs"
 
     def ensure(self) -> None:
         """Create the workspace directories if they do not exist."""
@@ -29,6 +30,7 @@ class TopicWorkspace:
             self.artifacts_dir,
             self.logs_dir,
             self.reports_dir,
+            self.manual_pdfs_dir,
             self.papers_dir,
             self.papers_dir / "CCF-A",
             self.papers_dir / "CCF-B",
